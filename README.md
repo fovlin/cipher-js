@@ -1,5 +1,6 @@
 # aes-128-gcm-cipher
 
+```js
 import {toAes128Gcm, deAes128Gcm} from "./aes128gcm.js"
 
 toAes128Gcm("Hello World!")
@@ -17,3 +18,4 @@ deAes128Gcm("sNo77w35IXtOLreZ","fNaAvZ4cC6DTWIAXA81WiQ","acovia")
 /* result:
  Hellow World!
 */
+```
