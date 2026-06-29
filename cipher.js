@@ -31,7 +31,7 @@ export function encryptFile(algorithm, file, keyLength, authTagLength) {
     crypto.generateKey("aes",{ length:keyLength },(err,key) => {
         if (err) throw err;
         var cipher = crypto.createCipheriv(algorithm,key,iv,{authTagLength:authTagLength});
-        const cipherData = Buffer.concat([cipher.update(fileData), cipher.final()]);
+        const cipherData = Buffer.concat([cipher.update(fileData), cipher.final()]),
         tag = cipher.getAuthTag();
         fs.writeFileSync(file + ".enc",cipherData);
         console.log("Algorithm: " + algorithm);
