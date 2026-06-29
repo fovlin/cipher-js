@@ -1,5 +1,5 @@
-import * as cipgher from "./cipgher.js";
+import * as cipher from "./cipher.js";
 
-// cipgher.encryptFile("aes-128-ccm","tagore.txt",128,16)
+// cipher.encryptFile("aes-128-ccm","tagore.txt",128,16)
 
-// cipgher.decryptFile('tagore.txt.enc','tagore.txt.key')
+// cipher.decryptFile('tagore.txt.enc','tagore.txt.key')
