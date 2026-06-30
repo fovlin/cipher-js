@@ -1,5 +1,6 @@
 import crypto from "node:crypto"
 import fs from "node:fs"
+import stream from "node:stream"
 
 export function encrypt(algorithm, plaintext, keyLength, authTagLength) {
     const iv = crypto.randomBytes(12);
@@ -26,45 +27,46 @@ export function decrypt(algorithm, ciphertext, key, iv, tag, authTagLength) {
 }
 
 export function encryptFile(algorithm, file, keyLength, authTagLength) {
-    const fileData = fs.readFileSync(file),
+    const inputData = fs.createReadStream(file),
+    outputData = fs.createWriteStream(file + ".enc"),
     iv = crypto.randomBytes(12);
     crypto.generateKey("aes",{ length:keyLength },(err,key) => {
         if (err) throw err;
         var cipher = crypto.createCipheriv(algorithm,key,iv,{authTagLength:authTagLength});
-        const cipherData = Buffer.concat([cipher.update(fileData), cipher.final()]),
-        tag = cipher.getAuthTag();
-        fs.writeFileSync(file + ".enc",cipherData);
-        console.log("Algorithm: " + algorithm);
-        console.log("Key: " + key.export().toString("hex"));
-        console.log("Iv: " + iv.toString("hex"));
-        console.log("Tag: " + tag.toString("hex"));
-        console.log("AuthTagLength: " + authTagLength);
-        const secData = Buffer.from(
-            JSON.stringify(
-                {
-                    "algorithm": algorithm,
-                    "key": key.export().toString("hex"),
-                    "iv": iv.toString("hex"),
-                    "tag": tag.toString("hex"),
-                    "authTagLength": authTagLength
-                }
+        stream.pipeline(inputData,cipher,outputData,(err) => {
+            if (err) throw err;
+            const tag = cipher.getAuthTag();
+            console.log("Algorithm: " + algorithm);
+            console.log("Key: " + key.export().toString("hex"));
+            console.log("Iv: " + iv.toString("hex"));
+            console.log("Tag: " + tag.toString("hex"));
+            console.log("AuthTagLength: " + authTagLength);
+            const secData = Buffer.from(
+                JSON.stringify(
+                    {
+                        "algorithm": algorithm,
+                        "key": key.export().toString("hex"),
+                        "iv": iv.toString("hex"),
+                        "tag": tag.toString("hex"),
+                        "authTagLength": authTagLength
+                    }
+                )
             )
-        )
-        fs.writeFileSync(file + ".key", secData)
+            fs.writeFileSync(file + ".key", secData)
+        })
     })
 }
 
-export function decryptFile(file, keyFile) {
-    const ciphertext = fs.readFileSync(file),
+export function decryptFile(encFile, keyFile) {
+    const inputData = fs.createReadStream(encFile),
+    outputData = fs.createWriteStream(encFile.replace(".enc","")),
     secText = JSON.parse(fs.readFileSync(keyFile).toString()),
     algorithm = secText["algorithm"],
     key = secText["key"],
     iv = secText["iv"],
     tag = secText["tag"],
     authTagLength = secText["authTagLength"];
-    var deCiphertext = crypto.createDecipheriv(algorithm, Buffer.from(key,"hex"), Buffer.from(iv,"hex"), {authTagLength:authTagLength});
-    deCiphertext.setAuthTag(Buffer.from(tag,"hex"));
-    const context = Buffer.concat([deCiphertext.update(ciphertext), deCiphertext.final()]);
-    console.log(context);
-    fs.writeFileSync(file.replace(".enc",""),context)
+    var decipher = crypto.createDecipheriv(algorithm, Buffer.from(key,"hex"), Buffer.from(iv,"hex"), {authTagLength:authTagLength});
+    decipher.setAuthTag(Buffer.from(tag,"hex"));
+    inputData.pipe(decipher).pipe(outputData);
 }
